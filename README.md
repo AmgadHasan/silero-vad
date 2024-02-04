@@ -16,6 +16,41 @@
   <img src="https://user-images.githubusercontent.com/12515440/228639780-876f7801-8ec5-4daf-89f3-b45b22dd1a73.png" />
 </p>
 
+<br/>
+<h2 align="center">Code</h2>
+<br/>
+<pre>
+<code>
+
+SAMPLING_RATE = 16000
+
+import torch
+torch.set_num_threads(1)
+
+from IPython.display import Audio
+from pprint import pprint
+
+USE_ONNX = False # change this to True if you want to test onnx model
+if USE_ONNX:
+    !pip install -q onnxruntime
+
+model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
+                              model='silero_vad',
+                              force_reload=True,
+                              onnx=USE_ONNX)
+
+(get_speech_timestamps,
+ save_audio,
+ read_audio,
+ VADIterator,
+ collect_chunks) = utils
+
+audio_file = "myfile.mp3"
+
+wav = read_audio(audio_file, sampling_rate=SAMPLING_RATE)
+speech_timestamps, speech_probs = get_speech_timestamps(wav, model, sampling_rate=SAMPLING_RATE, max_speech_duration_s=30, max_speech_duration_buffer=5)
+</code>
+</pre>
 
 <details>
 <summary>Real Time Example</summary>
