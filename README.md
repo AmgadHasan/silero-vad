@@ -48,6 +48,8 @@ model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
 audio_file = "myfile.mp3"
 
 wav = read_audio(audio_file, sampling_rate=SAMPLING_RATE)
+
+
 speech_timestamps, speech_probs = get_speech_timestamps(wav, model, sampling_rate=SAMPLING_RATE, max_speech_duration_s=30, max_speech_duration_buffer=5)
 </code>
 </pre>
