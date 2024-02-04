@@ -3,6 +3,7 @@ import torchaudio
 from typing import Callable, List
 import torch.nn.functional as F
 import warnings
+import math
 
 languages = ['ru', 'en', 'de', 'es']
 
@@ -167,6 +168,7 @@ def get_speech_timestamps(audio: torch.Tensor,
                           sampling_rate: int = 16000,
                           min_speech_duration_ms: int = 250,
                           max_speech_duration_s: float = float('inf'),
+                          max_speech_duration_buffer: float = None,
                           min_silence_duration_ms: int = 100,
                           window_size_samples: int = 512,
                           speech_pad_ms: int = 30,
@@ -251,9 +253,13 @@ def get_speech_timestamps(audio: torch.Tensor,
         warnings.warn('Unusual window_size_samples! Supported window_size_samples:\n - [512, 1024, 1536] for 16000 sampling_rate\n - [256, 512, 768] for 8000 sampling_rate')
 
     model.reset_states()
+    if max_speech_duration_buffer is None or max_speech_duration_buffer >= max_speech_duration_s:
+        max_speech_duration_buffer = 0.9 * max_speech_duration_s
+
     min_speech_samples = sampling_rate * min_speech_duration_ms / 1000
     speech_pad_samples = sampling_rate * speech_pad_ms / 1000
     max_speech_samples = sampling_rate * max_speech_duration_s - window_size_samples - 2 * speech_pad_samples
+    max_speech_samples_lower = max_speech_samples - (max_speech_duration_buffer*sampling_rate)
     min_silence_samples = sampling_rate * min_silence_duration_ms / 1000
     min_silence_samples_at_max_speech = sampling_rate * 98 / 1000
 
@@ -303,11 +309,17 @@ def get_speech_timestamps(audio: torch.Tensor,
                     current_speech['start'] = next_start
                 prev_end = next_start = temp_end = 0
             else:
-                current_speech['end'] = window_size_samples * i
+                # current_speech['end'] = window_size_samples * i
+                lower_bound = math.ceil((current_speech['start']+max_speech_samples_lower) / window_size_samples)
+                upper_bound = math.floor((current_speech['start']+max_speech_samples) / window_size_samples)
+                split_index = torch.argmin(torch.tensor(speech_probs[lower_bound:upper_bound])) + lower_bound
+                split_index = split_index.item()
+                current_speech['end'] = split_index * window_size_samples
+                
                 speeches.append(current_speech)
-                current_speech = {}
+                current_speech = {"start": current_speech['end']}
                 prev_end = next_start = temp_end = 0
-                triggered = False
+                triggered = True
                 continue
 
         if (speech_prob < neg_threshold) and triggered:
@@ -356,7 +368,7 @@ def get_speech_timestamps(audio: torch.Tensor,
     if visualize_probs:
         make_visualization(speech_probs, window_size_samples / sampling_rate)
 
-    return speeches
+    return speeches, speech_probs
 
 
 def get_number_ts(wav: torch.Tensor,
