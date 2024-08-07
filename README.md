@@ -34,7 +34,7 @@ USE_ONNX = False # change this to True if you want to test onnx model
 if USE_ONNX:
     !pip install -q onnxruntime
 
-model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
+model, utils = torch.hub.load(repo_or_dir='AmgadHasan/silero-vad',
                               model='silero_vad',
                               force_reload=True,
                               onnx=USE_ONNX)
